@@ -10,10 +10,12 @@ type Settings struct {
 	URL         string
 	Username    string
 	Password    string
+	// reuse connection HTTP 1.1
+	Connection	http.Client
 }
 
 func Version() string {
-	return "0.0.1"
+	return "0.0.2"
 }
 
 func Query(query string, settings Settings) (string, error) {
@@ -35,22 +37,15 @@ func Query(query string, settings Settings) (string, error) {
 	// insert query into <Body/> section
 	post = strings.Replace(post, "${query}", query, 1)
 
-	return httppost(settings.URL, post)
+	return httppost(settings, post)
 }
 
-func httppost(url string, xmlQuery string) (string, error) {
-
-	req, err := http.NewRequest("POST", url, strings.NewReader(xmlQuery))
-	if err != nil {
-		return "", err
-	}
+func httppost(settings Settings, xmlQuery string) (string, error) {
 
 	// no authentication used. username and password are submitted as cleartext in the POST section :scream:
 	//req.SetBasicAuth(`username`, `password`)
 
-	// TODO verify/improve client handling
-	client := &http.Client{}
-	response, err := client.Do(req)
+	response, err := settings.Connection.Post(settings.URL, "application/xml", strings.NewReader(xmlQuery));
 	if err != nil {
 		return "", err
 	}
