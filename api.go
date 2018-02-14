@@ -1,8 +1,13 @@
 package vertec
 
+/**
+According to https://www.vertec.com/de/support/kb/technik-und-datenmodell/vertecservice/xml/xmlschnittstelle/
+ */
+
 import (
 	"strings"
 	"net/http"
+	neturl "net/url"
 	"io/ioutil"
 )
 
@@ -12,6 +17,8 @@ type Settings struct {
 	Password    string
 	// reuse connection HTTP 1.1
 	Connection	http.Client
+	// Authentication Token
+	Token		string
 }
 
 func Version() string {
@@ -53,4 +60,23 @@ func httppost(settings Settings, xmlQuery string) (string, error) {
 	body, err := ioutil.ReadAll(response.Body)
 	defer response.Body.Close()
 	return string(body), nil
+}
+
+func Login(settings Settings, username string, password string) error {
+	// Vertec specific auth url rewrite
+	url := strings.Replace(settings.URL, "/xml", "/auth/xml", 1)
+
+	parameters := "?vertec_username=" +
+		neturl.QueryEscape(username) + "&password=" + neturl.QueryEscape(password)
+
+	response, err := settings.Connection.Post(url, "application/x-www-form-urlencoded", strings.NewReader(parameters))
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	defer response.Body.Close()
+	settings.Token = string(body)
+
+	return nil
 }
