@@ -6,8 +6,9 @@ According to https://www.vertec.com/de/support/kb/technik-und-datenmodell/vertec
 
 import (
 	"strings"
+	"fmt"
 	"net/http"
-	neturl "net/url"
+	"net/url"
 	"io/ioutil"
 )
 
@@ -26,20 +27,27 @@ func Version() string {
 }
 
 func Query(query string, settings Settings) (string, error) {
-	// not very sophisticated: just replace markers inside the fixed structure 
+
+	// not very sophisticated: just replace markers inside the fixed structure
+	// StringBuffer / Writer?
 	var post string = `<Envelope>
   <Header>
    <BasicAuth>
-     <Name>${username}</Name>
-     <Password>${password}</Password>
+     ${auth}
    </BasicAuth>
   </Header>
   <Body>${query}</Body>
 </Envelope>`
 
-	// replace patterns by values from config
-	post = strings.Replace(post, "${username}", settings.Username, 1)
-	post = strings.Replace(post, "${password}", settings.Password, 1)
+	if len(settings.Token) > 0 {
+		post = strings.Replace(post, "${auth}", "<Token>" + settings.Token + "</Token>", 1)
+	} else {
+		post = strings.Replace(post, "${auth}", "<Name>${username}</Name><Password>${password}</Password>", 1)
+		// replace patterns by values from config
+		post = strings.Replace(post, "${username}", settings.Username, 1)
+		post = strings.Replace(post, "${password}", settings.Password, 1)
+		fmt.Printf("falling back to lecacy auth\n%s\n", post)
+	}
 
 	// insert query into <Body/> section
 	post = strings.Replace(post, "${query}", query, 1)
@@ -59,22 +67,38 @@ func httppost(settings Settings, xmlQuery string) (string, error) {
 
 	body, err := ioutil.ReadAll(response.Body)
 	defer response.Body.Close()
+
+	if err != nil {
+		return "", err
+	}
+
 	return string(body), nil
 }
 
 func Login(settings Settings, username string, password string) error {
 	// Vertec specific auth url rewrite
-	url := strings.Replace(settings.URL, "/xml", "/auth/xml", 1)
+	authurl := strings.Replace(settings.URL, "/xml", "/auth/xml", 1)
 
-	parameters := "?vertec_username=" +
-		neturl.QueryEscape(username) + "&password=" + neturl.QueryEscape(password)
+	form := url.Values{}
+	form.Add("vertec_username", username)
+	form.Add("password", password)
 
-	response, err := settings.Connection.Post(url, "application/x-www-form-urlencoded", strings.NewReader(parameters))
+	fmt.Printf("accessing %s with form %s\n", authurl, form.Encode())
+
+	response, err := settings.Connection.Post(authurl, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
 	}
 
+	if response.StatusCode != 200 {
+		return fmt.Errorf("Failed to authenticate. Status code %d", response.StatusCode)
+	}
+
 	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
 	defer response.Body.Close()
 	settings.Token = string(body)
 
