@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"io/ioutil"
+	log "github.com/inconshreveable/log15"
 )
 
 type Settings struct {
@@ -42,11 +43,11 @@ func Query(query string, settings Settings) (string, error) {
 	if len(settings.Token) > 0 {
 		post = strings.Replace(post, "${auth}", "<Token>" + settings.Token + "</Token>", 1)
 	} else {
+		log.Debug("using lecacy auth")
 		post = strings.Replace(post, "${auth}", "<Name>${username}</Name><Password>${password}</Password>", 1)
 		// replace patterns by values from config
 		post = strings.Replace(post, "${username}", settings.Username, 1)
 		post = strings.Replace(post, "${password}", settings.Password, 1)
-		fmt.Printf("falling back to lecacy auth\n%s\n", post)
 	}
 
 	// insert query into <Body/> section
@@ -58,7 +59,7 @@ func Query(query string, settings Settings) (string, error) {
 func httppost(settings Settings, xmlQuery string) (string, error) {
 
 	// no authentication used. username and password are submitted as cleartext in the POST section :scream:
-	//req.SetBasicAuth(`username`, `password`)
+	// req.SetBasicAuth(`username`, `password`)
 
 	response, err := settings.Connection.Post(settings.URL, "application/xml", strings.NewReader(xmlQuery));
 	if err != nil {
