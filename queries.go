@@ -3,7 +3,6 @@ package vertec
 import (
 	"encoding/xml"
 	"strings"
-	"fmt"
 	"io"
 )
 
@@ -13,10 +12,9 @@ type Project struct {
 	Beschrieb string `xml:"beschrieb" json:"description"`
 }
 
-
+// this hack structure might be created at runtime ...
 type Projects  struct {
-	XMLName xml.Name
-	Elements []Project `xml:"Body>QueryResponse>Projekt"`
+	Elements []Project `xml:"QueryResponse>Projekt"`
 }
 
 func ListProjects(user string, settings Settings) (Projects, error) {
@@ -31,7 +29,7 @@ func ListProjects(user string, settings Settings) (Projects, error) {
 	</Resultdef>`
 
 	var q2 = strings.Replace(query, "[USER]", user, 1)
-	response := Projects { XMLName: xml.Name{"", "Envelope"}, }
+	response := Projects {}
 	err := queryList(q2, &response, settings)
 	if err != nil {
 		return Projects{}, err
@@ -45,39 +43,28 @@ func queryList(query string, v interface{}, settings Settings) (error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println("parsing ", response)
 	d := xml.NewDecoder(strings.NewReader(response))
-
-	return d.Decode(v) // works,  but involves correct prefix
 
 	for {
 		token, tokenErr := d.Token()
 		if tokenErr != nil {
 			if tokenErr == io.EOF {
+				// end of document
 				break
 			}
 			// propagate error
 			return tokenErr
 		}
 
-		println("on token ", token)
 		switch node := token.(type) {
-
 		case xml.StartElement:
-			if node.Name.Local == "QueryResponse" {
-				fmt.Println("decoding ", node.Name.Local)
+			if node.Name.Local == "Body" {
 				// decode whole phase according to xml: annotations
-				if err := d.DecodeElement(&v, &node); err != nil {
+				if err := d.DecodeElement(v, &node); err != nil {
 					// propagate error
 					return err
 				}
-				buf, _ := xml.Marshal(v)
-				fmt.Println("decoded ", string(buf))
-			} else {
-				println("decoding element ", node.Name.Local)
 			}
-		default:
-			println("decoding unknown ", node)
 		}
 	}
 

@@ -4,8 +4,6 @@ import (
 	"testing"
 	"net/http"
 	"reflect"
-	"encoding/xml"
-	"fmt"
 )
 
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
@@ -47,10 +45,7 @@ func TestListProjects(t *testing.T) {
 	</Body></Envelope>`
 
 	// same as above
-	expected := Projects {xml.Name{"", "Envelope"}, []Project { {1, "P1", "Phase1"}, { 99, "P2", "Phase2"} }}
-
-	buf, _:= xml.MarshalIndent(expected, "", "  ")
-	fmt.Println("expected ", string(buf))
+	expected := Projects {[]Project { {1, "P1", "Phase1"}, { 99, "P2", "Phase2"} }}
 
 	result, _ := ListProjects("123", forResponse(input))
 	assertEqual(t, len(expected.Elements), len(result.Elements))
