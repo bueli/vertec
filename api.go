@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"io/ioutil"
+	"time"
 	log "github.com/inconshreveable/log15"
 )
 
@@ -22,6 +23,8 @@ type Settings struct {
 	// Authentication Token
 	Token		string
 }
+
+var logger = log.New()
 
 func Version() string {
 	return "0.0.2"
@@ -52,7 +55,7 @@ func Query(query string, settings Settings) (string, error) {
 
 	// insert query into <Body/> section
 	post = strings.Replace(post, "${query}", query, 1)
-
+	
 	return httppost(settings, post)
 }
 
@@ -60,8 +63,9 @@ func httppost(settings Settings, xmlQuery string) (string, error) {
 
 	// no authentication used. username and password are submitted as cleartext in the POST section :scream:
 	// req.SetBasicAuth(`username`, `password`)
-
+	start := time.Now()
 	response, err := settings.Connection.Post(settings.URL, "application/xml", strings.NewReader(xmlQuery));
+	end := time.Now()
 	if err != nil {
 		return "", err
 	}
@@ -73,6 +77,8 @@ func httppost(settings Settings, xmlQuery string) (string, error) {
 		return "", err
 	}
 
+	logger.Debug("http post", "duration", (end.Nanosecond() - start.Nanosecond()) / 10000, "request", xmlQuery, "response", string(body))
+
 	return string(body), nil
 }
 
@@ -83,8 +89,6 @@ func Login(settings Settings, username string, password string) error {
 	form := url.Values{}
 	form.Add("vertec_username", username)
 	form.Add("password", password)
-
-	fmt.Printf("accessing %s with form %s\n", authurl, form.Encode())
 
 	response, err := settings.Connection.Post(authurl, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
 	if err != nil {
