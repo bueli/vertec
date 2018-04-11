@@ -76,15 +76,13 @@ func httppost(settings Settings, xmlQuery string) (string, error) {
 	return string(body), nil
 }
 
-func Login(settings Settings, username string, password string) error {
-	// Vertec specific auth url rewrite
+func Login(settings *Settings, username string, password string) error {
+	// VertecCloud specific auth url rewrite
 	authurl := strings.Replace(settings.URL, "/xml", "/auth/xml", 1)
 
 	form := url.Values{}
 	form.Add("vertec_username", username)
-	form.Add("password", password)
-
-	fmt.Printf("accessing %s with form %s\n", authurl, form.Encode())
+	form.Add("password", password)	
 
 	response, err := settings.Connection.Post(authurl, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
 	if err != nil {

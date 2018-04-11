@@ -20,7 +20,7 @@ type Projects  struct {
 func ListProjects(user string, settings Settings) (Projects, error) {
 
 	query := `<Selection>
-		<objref>[USER]</objref>
+		<objref>${USER}</objref>
 		<ocl>bearbProjekte-&gt;select(aktiv)</ocl>
 	</Selection>
 	<Resultdef>
@@ -28,7 +28,7 @@ func ListProjects(user string, settings Settings) (Projects, error) {
 		<member>beschrieb</member>
 	</Resultdef>`
 
-	var q2 = strings.Replace(query, "[USER]", user, 1)
+	var q2 = strings.Replace(query, "${USER}", user, 1)
 	response := Projects {}
 	err := queryList(q2, &response, settings)
 	if err != nil {
