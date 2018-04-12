@@ -45,7 +45,7 @@ func TestListProjects(t *testing.T) {
 	</Body></Envelope>`
 
 	// same as above
-	expected := Projects {[]Project { {1, "P1", "Phase1"}, { 99, "P2", "Phase2"} }}
+	expected := Projects {[]Project { {"1", "P1", "Phase1"}, { "99", "P2", "Phase2"} }}
 
 	result, _ := ListProjects("123", forResponse(input))
 	assertEqual(t, len(expected.Elements), len(result.Elements))
